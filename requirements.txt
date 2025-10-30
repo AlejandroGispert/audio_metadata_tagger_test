@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+transformers
+torch
+tensorflow==2.19.0
+tensorflow-hub
+librosa
+numpy
+soundfile
