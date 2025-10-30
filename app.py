@@ -18,11 +18,15 @@ print("🤗 Loading text classifiers...")
 mood_classifier = pipeline(
     "text-classification",
     model="j-hartmann/emotion-english-distilroberta-base",
-    top_k=3
+    top_k=3,
+    framework="pt",
+    model_kwargs={"use_safetensors": False}
 )
 genre_classifier = pipeline(
     "zero-shot-classification",
-    model="facebook/bart-large-mnli"
+    model="facebook/bart-large-mnli",
+    framework="pt",
+    model_kwargs={"use_safetensors": False}
 )
 possible_genres = [
     "rock", "pop", "jazz", "hip hop", "classical", "blues", "electronic",

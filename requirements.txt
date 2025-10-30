@@ -1,8 +1,9 @@
 fastapi
 uvicorn
-transformers
+python-multipart
+transformers==4.40.0
 torch
-tensorflow==2.19.0
+tensorflow==2.16.2
 tensorflow-hub
 librosa
 numpy

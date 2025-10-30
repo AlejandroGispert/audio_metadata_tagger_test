@@ -1,0 +1,28 @@
+# Virtual environment
+venv
+env
+ENV
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.wav
+*.mp3
+*.flac
+temp_audio/
