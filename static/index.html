@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🎧 AI Music Metadata Tagger</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 15px;
+        color: #333;
+        font-size: 14px;
+      }
+
+      .container {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 20px;
+        padding: 20px 15px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        font-size: 1.8em;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 5px;
+      }
+
+      .subtitle {
+        color: #666;
+        font-size: 0.9em;
+      }
+
+      .upload-section {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 15px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .form-group.full-width {
+        grid-column: 1 / -1;
+      }
+
+      label {
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #555;
+        font-size: 0.85em;
+      }
+
+      input[type="text"],
+      input[type="file"] {
+        padding: 8px 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 0.9em;
+        transition: all 0.3s;
+      }
+
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      input[type="text"]:disabled {
+        background: #f0f0f0;
+        color: #4caf50;
+        font-weight: 600;
+        border-color: #4caf50;
+        cursor: not-allowed;
+      }
+
+      input[type="text"]:read-only {
+        background: #fafafa;
+        color: #999;
+        cursor: default;
+      }
+
+      .file-upload-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+        width: 100%;
+      }
+
+      .file-upload-wrapper input[type="file"] {
+        position: absolute;
+        left: -9999px;
+      }
+
+      .file-upload-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 25px;
+        border: 2px dashed #667eea;
+        border-radius: 10px;
+        background: #f8f9ff;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+      }
+
+      .file-upload-label:hover {
+        background: #eef1ff;
+        border-color: #764ba2;
+      }
+
+      .file-upload-label.has-file {
+        background: #e8f5e9;
+        border-color: #4caf50;
+        border-style: solid;
+      }
+
+      .upload-icon {
+        font-size: 2em;
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .upload-text {
+        color: #667eea;
+        font-weight: 600;
+        font-size: 0.95em;
+      }
+
+      .file-name {
+        margin-top: 8px;
+        color: #4caf50;
+        font-weight: 600;
+        font-size: 0.85em;
+      }
+
+      .submit-btn {
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        margin-top: 8px;
+      }
+
+      .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+      }
+
+      .submit-btn:active {
+        transform: translateY(0);
+      }
+
+      .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 20px;
+        display: none;
+      }
+
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .results {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        display: none;
+      }
+
+      .results h2 {
+        color: #667eea;
+        margin-bottom: 15px;
+        text-align: center;
+        font-size: 1.3em;
+      }
+
+      .result-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+
+      .result-card {
+        background: #f8f9ff;
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 3px solid #667eea;
+      }
+
+      .result-card h3 {
+        color: #764ba2;
+        margin-bottom: 10px;
+        font-size: 1em;
+      }
+
+      .result-card.final {
+        grid-column: 1 / -1;
+        background: linear-gradient(
+          135deg,
+          rgba(102, 126, 234, 0.1) 0%,
+          rgba(118, 75, 162, 0.1) 100%
+        );
+        border-left: 4px solid #4caf50;
+      }
+
+      .result-card.final h3 {
+        color: #4caf50;
+        font-size: 1.1em;
+      }
+
+      .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .tag {
+        background: #667eea;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-weight: 500;
+        font-size: 0.8em;
+      }
+
+      .tag.genre {
+        background: #764ba2;
+      }
+
+      .tag.mood {
+        background: #f57c00;
+      }
+
+      .input-info {
+        background: #fff3cd;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border-left: 3px solid #ffc107;
+        font-size: 0.85em;
+      }
+
+      .input-info p {
+        margin: 3px 0;
+        color: #856404;
+      }
+
+      .error {
+        background: #ffebee;
+        color: #c62828;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        border-left: 3px solid #c62828;
+        display: none;
+        font-size: 0.9em;
+      }
+
+      @media (max-width: 768px) {
+        .form-grid,
+        .result-grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 1.5em;
+        }
+
+        .upload-section,
+        .results {
+          padding: 20px;
+        }
+
+        .result-card.final {
+          grid-column: 1;
+        }
+
+        body {
+          padding: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🎧 AI Music Metadata Tagger</h1>
+        <p class="subtitle">
+          Automatically detect genre and mood from your music
+        </p>
+      </header>
+
+      <div class="upload-section">
+        <form id="uploadForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="title">Track Title *</label>
+              <input
+                type="text"
+                id="title"
+                name="title"
+                placeholder="Enter track title"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="artist">Artist *</label>
+              <input
+                type="text"
+                id="artist"
+                name="artist"
+                placeholder="Enter artist name"
+                required
+              />
+            </div>
+            <div class="form-group full-width">
+              <label for="album">Album / EP</label>
+              <input
+                type="text"
+                id="album"
+                name="album"
+                placeholder="Enter album name (optional)"
+              />
+            </div>
+            <div class="form-group">
+              <label for="mood">Mood (AI Generated)</label>
+              <input
+                type="text"
+                id="mood"
+                name="mood"
+                placeholder="Will be filled by AI..."
+                readonly
+              />
+            </div>
+            <div class="form-group">
+              <label for="genre">Genre (AI Generated)</label>
+              <input
+                type="text"
+                id="genre"
+                name="genre"
+                placeholder="Will be filled by AI..."
+                readonly
+              />
+            </div>
+            <div class="form-group full-width">
+              <label>Audio File *</label>
+              <div class="file-upload-wrapper">
+                <input
+                  type="file"
+                  id="audioFile"
+                  name="file"
+                  accept="audio/*"
+                  required
+                />
+                <label for="audioFile" class="file-upload-label" id="fileLabel">
+                  <div>
+                    <div class="upload-icon">🎵</div>
+                    <div class="upload-text">Click to upload audio file</div>
+                    <div style="color: #999; margin-top: 5px; font-size: 0.8em">
+                      WAV, MP3, FLAC supported
+                    </div>
+                    <div class="file-name" id="fileName"></div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="submit-btn" id="submitBtn">
+            🎯 Analyze Track
+          </button>
+        </form>
+      </div>
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p style="color: #667eea; font-weight: 600; font-size: 0.95em">
+          Analyzing your track...
+        </p>
+        <p style="color: #999; margin-top: 8px; font-size: 0.85em">
+          This may take a few moments
+        </p>
+      </div>
+
+      <div class="error" id="error"></div>
+
+      <div class="results" id="results">
+        <h2>✨ Analysis Results</h2>
+
+        <div class="input-info" id="inputInfo"></div>
+
+        <div class="result-grid">
+          <div class="result-card">
+            <h3>🎵 Audio Analysis</h3>
+            <div>
+              <strong>Mood:</strong>
+              <div class="tag-list" id="audioMood"></div>
+            </div>
+            <div style="margin-top: 15px">
+              <strong>Genre:</strong>
+              <div class="tag-list" id="audioGenre"></div>
+            </div>
+          </div>
+
+          <div class="result-card">
+            <h3>📝 Text Analysis</h3>
+            <div>
+              <strong>Mood:</strong>
+              <div class="tag-list" id="textMood"></div>
+            </div>
+            <div style="margin-top: 15px">
+              <strong>Genre:</strong>
+              <div class="tag-list" id="textGenre"></div>
+            </div>
+          </div>
+
+          <div class="result-card final">
+            <h3>🎯 Final Prediction</h3>
+            <div>
+              <strong>Mood:</strong>
+              <div class="tag-list" id="finalMood"></div>
+            </div>
+            <div style="margin-top: 15px">
+              <strong>Genre:</strong>
+              <div class="tag-list" id="finalGenre"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const form = document.getElementById("uploadForm");
+      const fileInput = document.getElementById("audioFile");
+      const fileLabel = document.getElementById("fileLabel");
+      const fileName = document.getElementById("fileName");
+      const loading = document.getElementById("loading");
+      const results = document.getElementById("results");
+      const error = document.getElementById("error");
+      const submitBtn = document.getElementById("submitBtn");
+
+      // File input handling
+      fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) {
+          const file = e.target.files[0];
+          fileName.textContent = `📁 ${file.name}`;
+          fileLabel.classList.add("has-file");
+        } else {
+          fileName.textContent = "";
+          fileLabel.classList.remove("has-file");
+        }
+      });
+
+      // Form submission
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        // Hide previous results and errors
+        results.style.display = "none";
+        error.style.display = "none";
+
+        // Show loading
+        loading.style.display = "block";
+        submitBtn.disabled = true;
+
+        // Prepare form data
+        const formData = new FormData();
+        formData.append("title", document.getElementById("title").value);
+        formData.append("artist", document.getElementById("artist").value);
+        formData.append(
+          "album",
+          document.getElementById("album").value || "Unknown"
+        );
+        formData.append("file", fileInput.files[0]);
+
+        try {
+          const response = await fetch("http://127.0.0.1:8000/predict_hybrid", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          // Hide loading
+          loading.style.display = "none";
+
+          // Display results
+          displayResults(data);
+        } catch (err) {
+          loading.style.display = "none";
+          error.textContent = `Error: ${err.message}. Make sure the server is running on http://127.0.0.1:8000`;
+          error.style.display = "block";
+          console.error("Error:", err);
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      function displayResults(data) {
+        // Input info
+        document.getElementById("inputInfo").innerHTML = `
+                <p><strong>📀 Title:</strong> ${data.input.title}</p>
+                <p><strong>🎤 Artist:</strong> ${data.input.artist}</p>
+                <p><strong>💿 Album:</strong> ${data.input.album}</p>
+            `;
+
+        // Fill and disable mood and genre inputs
+        const moodInput = document.getElementById("mood");
+        const genreInput = document.getElementById("genre");
+
+        moodInput.value = data.final_prediction.mood.join(", ");
+        genreInput.value = data.final_prediction.genre.join(", ");
+        moodInput.disabled = true;
+        genreInput.disabled = true;
+
+        // Audio-based results
+        document.getElementById(
+          "audioMood"
+        ).innerHTML = `<span class="tag mood">${data.audio_based.mood}</span>`;
+        document.getElementById(
+          "audioGenre"
+        ).innerHTML = `<span class="tag genre">${data.audio_based.genre}</span>`;
+
+        // Text-based results
+        document.getElementById("textMood").innerHTML = data.text_based.mood
+          .map((m) => `<span class="tag mood">${m}</span>`)
+          .join("");
+        document.getElementById("textGenre").innerHTML = data.text_based.genre
+          .map((g) => `<span class="tag genre">${g}</span>`)
+          .join("");
+
+        // Final predictions
+        document.getElementById("finalMood").innerHTML =
+          data.final_prediction.mood
+            .map((m) => `<span class="tag mood">${m}</span>`)
+            .join("");
+        document.getElementById("finalGenre").innerHTML =
+          data.final_prediction.genre
+            .map((g) => `<span class="tag genre">${g}</span>`)
+            .join("");
+
+        // Show results
+        results.style.display = "block";
+
+        // Smooth scroll to results
+        results.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    </script>
+  </body>
+</html>

@@ -1,5 +1,8 @@
 # app.py
 from fastapi import FastAPI, UploadFile, File, Form
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from transformers import pipeline
 import tensorflow as tf
 import tensorflow_hub as hub
@@ -7,8 +10,23 @@ import librosa
 import numpy as np
 import re
 import tempfile
+import os
 
 app = FastAPI(title="🎧 AI Music Metadata Tagger (Hybrid Audio + Text)")
+
+# Enable CORS for local development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount static files
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # ---------- Load models ----------
 print("🔊 Loading YAMNet...")
@@ -106,4 +124,13 @@ async def predict_hybrid(
 
 @app.get("/")
 def root():
+    """Serve the web UI"""
+    html_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(html_path):
+        return FileResponse(html_path)
+    return {"message": "🎶 Hybrid AI Music Tagger API running!"}
+
+@app.get("/api/status")
+def status():
+    """API status endpoint"""
     return {"message": "🎶 Hybrid AI Music Tagger API running!"}
