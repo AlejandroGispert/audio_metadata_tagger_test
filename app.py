@@ -64,35 +64,47 @@ def get_embedding(audio_path: str):
         return np.zeros(1024)
 
 def predict_from_text(title, artist, album):
-    """Text-based predictions."""
+    """Text-based predictions with confidence scores."""
     text = f"Song: {title} by {artist} from the album {album}."
     text = re.sub(r"\s+", " ", text.strip())
 
     mood_preds = mood_classifier(text)
     moods = [m["label"] for m in mood_preds[0]] if isinstance(mood_preds, list) else ["Unknown"]
+    mood_scores = [float(m["score"]) * 100 for m in mood_preds[0]] if isinstance(mood_preds, list) else [0.0]
 
     genre_preds = genre_classifier(text, possible_genres)
     genres = [g for g, score in zip(genre_preds["labels"], genre_preds["scores"]) if score > 0.15]
+    genre_scores = [float(score) * 100 for score in genre_preds["scores"] if score > 0.15]
 
-    return moods[:2], genres[:2]
+    return moods[:2], mood_scores[:2], genres[:2], genre_scores[:2]
 
 def predict_from_audio(audio_path):
-    """Audio-based rough predictions from energy/brightness."""
+    """Audio-based rough predictions from energy/brightness with confidence."""
     emb = get_embedding(audio_path)
     energy = float(np.mean(np.abs(emb)))
     brightness = float(np.mean(emb[512:]))
 
-    # Simple heuristics
+    # Simple heuristics with confidence based on how far from threshold
     mood = "energetic" if energy > 0.02 else "calm"
+    mood_confidence = min(100, max(50, abs(energy - 0.02) * 2000 + 60))
+    
     genre = "electronic" if brightness > 0 else "acoustic"
-    return mood, genre
+    genre_confidence = min(100, max(50, abs(brightness) * 500 + 60))
+    
+    return mood, mood_confidence, genre, genre_confidence
 
-def combine_predictions(text_moods, text_genres, audio_mood, audio_genre):
-    """Simple fusion rule-based ensemble."""
+def combine_predictions(text_moods, text_mood_scores, text_genres, text_genre_scores, 
+                       audio_mood, audio_mood_conf, audio_genre, audio_genre_conf):
+    """Simple fusion rule-based ensemble with confidence scores."""
     # Prefer text results for genre, audio for mood balance
     final_moods = list({audio_mood, *text_moods})[:2]
     final_genres = list({audio_genre, *text_genres})[:2]
-    return final_moods, final_genres
+    
+    # Calculate average confidence (weighted towards text predictions)
+    mood_confidence = (audio_mood_conf * 0.4 + (sum(text_mood_scores[:2]) / len(text_mood_scores[:2]) if text_mood_scores else 0) * 0.6)
+    genre_confidence = (audio_genre_conf * 0.3 + (sum(text_genre_scores[:2]) / len(text_genre_scores[:2]) if text_genre_scores else 0) * 0.7)
+    
+    return final_moods, mood_confidence, final_genres, genre_confidence
 
 # ---------- Hybrid Endpoint ----------
 @app.post("/predict_hybrid")
@@ -109,15 +121,33 @@ async def predict_hybrid(
             tmp_path = tmp.name
 
         # Predictions
-        text_moods, text_genres = predict_from_text(title, artist, album)
-        audio_mood, audio_genre = predict_from_audio(tmp_path)
-        final_moods, final_genres = combine_predictions(text_moods, text_genres, audio_mood, audio_genre)
+        text_moods, text_mood_scores, text_genres, text_genre_scores = predict_from_text(title, artist, album)
+        audio_mood, audio_mood_conf, audio_genre, audio_genre_conf = predict_from_audio(tmp_path)
+        final_moods, mood_confidence, final_genres, genre_confidence = combine_predictions(
+            text_moods, text_mood_scores, text_genres, text_genre_scores,
+            audio_mood, audio_mood_conf, audio_genre, audio_genre_conf
+        )
 
         return {
             "input": {"title": title, "artist": artist, "album": album},
-            "audio_based": {"mood": audio_mood, "genre": audio_genre},
-            "text_based": {"mood": text_moods, "genre": text_genres},
-            "final_prediction": {"mood": final_moods, "genre": final_genres}
+            "audio_based": {
+                "mood": audio_mood, 
+                "mood_confidence": round(audio_mood_conf, 1),
+                "genre": audio_genre,
+                "genre_confidence": round(audio_genre_conf, 1)
+            },
+            "text_based": {
+                "mood": text_moods, 
+                "mood_scores": [round(s, 1) for s in text_mood_scores],
+                "genre": text_genres,
+                "genre_scores": [round(s, 1) for s in text_genre_scores]
+            },
+            "final_prediction": {
+                "mood": final_moods, 
+                "mood_confidence": round(mood_confidence, 1),
+                "genre": final_genres,
+                "genre_confidence": round(genre_confidence, 1)
+            }
         }
     except Exception as e:
         return {"error": str(e)}

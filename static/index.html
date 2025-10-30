@@ -109,6 +109,28 @@
         cursor: default;
       }
 
+      .accuracy-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        color: white;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.75em;
+        font-weight: 600;
+        margin-left: 8px;
+        box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+      }
+
+      .accuracy-badge.medium {
+        background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+      }
+
+      .accuracy-badge.low {
+        background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+      }
+
       .file-upload-wrapper {
         position: relative;
         overflow: hidden;
@@ -383,7 +405,10 @@
               />
             </div>
             <div class="form-group">
-              <label for="mood">Mood (AI Generated)</label>
+              <label for="mood">
+                Mood (AI Generated)
+                <span id="moodAccuracy"></span>
+              </label>
               <input
                 type="text"
                 id="mood"
@@ -393,7 +418,10 @@
               />
             </div>
             <div class="form-group">
-              <label for="genre">Genre (AI Generated)</label>
+              <label for="genre">
+                Genre (AI Generated)
+                <span id="genreAccuracy"></span>
+              </label>
               <input
                 type="text"
                 id="genre"
@@ -570,11 +598,35 @@
         // Fill and disable mood and genre inputs
         const moodInput = document.getElementById("mood");
         const genreInput = document.getElementById("genre");
+        const moodAccuracy = document.getElementById("moodAccuracy");
+        const genreAccuracy = document.getElementById("genreAccuracy");
 
         moodInput.value = data.final_prediction.mood.join(", ");
         genreInput.value = data.final_prediction.genre.join(", ");
         moodInput.disabled = true;
         genreInput.disabled = true;
+
+        // Add accuracy badges with color coding
+        const moodConf = data.final_prediction?.mood_confidence || 0;
+        const genreConf = data.final_prediction?.genre_confidence || 0;
+
+        function getAccuracyClass(confidence) {
+          if (confidence >= 75) return "";
+          if (confidence >= 50) return "medium";
+          return "low";
+        }
+
+        if (moodConf > 0) {
+          moodAccuracy.innerHTML = `<span class="accuracy-badge ${getAccuracyClass(
+            moodConf
+          )}">${moodConf.toFixed(1)}%</span>`;
+        }
+
+        if (genreConf > 0) {
+          genreAccuracy.innerHTML = `<span class="accuracy-badge ${getAccuracyClass(
+            genreConf
+          )}">${genreConf.toFixed(1)}%</span>`;
+        }
 
         // Audio-based results
         document.getElementById(
